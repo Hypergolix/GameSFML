@@ -15,38 +15,49 @@ using namespace sf;
 */
 
 class Player {
-	float xPos;
-	float yPos;
-	int8_t xDir;
-	int8_t yDir;
+	float xPos = 0.0f;
+	float yPos = 0.0f;
+	float xDir = 1.0f;
+	float yDir = 0.0f;
 	// RGB? below should be constants, they are properties but shouldn't really change
-	uint8_t color[3];
-	// 
-	float playerSpeed;
-	float playerVisibility;
+	uint8_t color[3] = { 127, 127, 127 };
+	// These might be the same across all players - apart from enemies
+	float playerSpeed = 300.0f;
+	float playerVisibility = 1.f;
+	// Should each player have it's graphics be part of the player class?
 public:
 	// Up Down Left Right?
-	int8_t setDir(int8_t x, int8_t y) {
-		xDir = x;
-		yDir = y;
+	void setDir(float x, float y) {
+		xDir += x;
+		yDir += y;
+	}
+	// Returns Vector2f with x and y position of player
+	Vector2f getXY() {
+		return Vector2f(xPos, yPos);
+	}
+	float getDir(){
+		return xDir, yDir;
 	}
 	// delta time needs to be float, also these functions are wrong
-	int32_t movePlayer(Time deltaTime) {
-		xPos += xDir * playerSpeed * deltaTime.asMilliseconds();
-		yPos += yDir * playerSpeed * deltaTime.asMilliseconds();
+	void movePlayer(float x, float y, float deltaTime) {
+		xPos += x * playerSpeed * deltaTime;
+		yPos += y * playerSpeed * deltaTime;
+		// Think this way we can save direction but only move when the move/keypress happens
+		setDir(x, y);
 	}
-	
 };
 
 int main()
 {
-	Clock deltaTime;
+	cout << fixed;
 
-	const unsigned int playerWidth = 96;
-	const unsigned int playerHeight = 118;
+	const unsigned int playerWidth = 196;
+	const unsigned int playerHeight = 253;
 
 	const int spriteNr = 1;
 	vector <Player> playerData;
+	Player player1;
+	playerData.push_back(player1);
 
 	// Set dynamically, change in settings? - keep scale/res?
 	const unsigned int vWidth = 1920;
@@ -55,31 +66,29 @@ int main()
 	vector <Sprite> spriteVect;
 
 	RenderWindow window(VideoMode(vWidth, vHeight), "SUS");
-
+	window.setFramerateLimit(144);
 	// 
 	Texture texture;
 	// Create texture to allow for max size pillar
-	if (!texture.loadFromFile("sprites/spriteTextures.jpg", IntRect(0, 0, 192, 118))) {
+	if (!texture.loadFromFile("sprites/spriteTextures2Debug.png", IntRect(0, 0, 1024, 1024))) {
 		// Error
 	}
 
 	// Create sprites
-	for (uint16_t i = 0; i < spriteNr; i++) {}
-	Sprite playerS;
-	playerS.setTextureRect(IntRect(0, 0, 96, 118));
-	playerS.setTexture(texture);
-	// Origin set to bottom left, origin should be constant and not re calculated. Maybe just change position of sprite
-	// pillar.setOrigin(0, dataSet[i]);
-	//pillar.setPosition((i * barWidth) + (i * 5), vHeight);
-	// Passes a class of Sprite to vector?
-	spriteVect.push_back(playerS);
-
+	for (uint16_t i = 0; i < spriteNr; i++) {
+		Sprite playerS;
+		playerS.setTextureRect(IntRect(0, 0, playerWidth, playerHeight));
+		playerS.setTexture(texture);
+		// pillar.setOrigin();
+		// pillar.setPosition();
+		spriteVect.push_back(playerS);
+	}
 	Clock clock;
+
 	while (window.isOpen())
 	{
-		deltaTime.restart();
-
-		// playerData[0].setDir(0,0);
+		// Save time since last restart, and restart the clock
+		float deltaTime = clock.restart().asSeconds();
 
 		Event event;
 		while (window.pollEvent(event))
@@ -90,22 +99,38 @@ int main()
 				window.close();
 				break;
 			case Event::KeyPressed:
-				if (event.key.code == sf::Keyboard::D)
-				{
-					playerData[0].setDir(1, 0);
-					spriteVect[0].setTextureRect(IntRect(97, 0, 192, 118));
-					spriteVect[0].setTexture(texture);
-					cout << "D key pressed \n";
-				}
 				break;
 			default:
 				break;
 			}
 		}
-
-		// Movement 
-		playerData[0].movePlayer(deltaTime.getTimeElapsed())
 		
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+		{
+			playerData[0].movePlayer(0.f, -1.f, deltaTime);
+			spriteVect[0].setTextureRect(IntRect(196, 0, playerWidth - 1, playerHeight));
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+		{
+			playerData[0].movePlayer(-1.f, 0.f, deltaTime);
+			spriteVect[0].setTextureRect(IntRect(196, 0, playerWidth - 1, playerHeight));
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+		{
+			playerData[0].movePlayer(0.f, 1.f, deltaTime);
+			spriteVect[0].setTextureRect(IntRect(196, 0, playerWidth - 1, playerHeight));
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+		{
+			playerData[0].movePlayer(1.f, 0.f, deltaTime);
+			spriteVect[0].setTextureRect(IntRect(196, 0, playerWidth - 1, playerHeight));
+		}
+
+		// Tries to move every frame, maybe check if position has been changed?
+		//playerData[0].movePlayer(deltaTime);
+		// Graphics - use .move() ?
+		spriteVect[0].setPosition(playerData[0].getXY());
+
 		// Draw call 
 		window.clear(Color(255, 255, 255, 255));
 		for (uint16_t i = 0; i < spriteVect.size(); i++) {
@@ -113,6 +138,11 @@ int main()
 			window.draw(spriteVect[i]);
 		}
 		window.display();
+
+		//cout << "deltaTime: " << deltaTime << "\n";
+		//cout << "xPos: " << playerData[0].getX() << "\n";
+		//cout << "yPos: " << playerData[0].getY() << "\n";
+
 	}
 	return 0;
 }
